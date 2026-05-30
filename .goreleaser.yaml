@@ -1,0 +1,77 @@
+# GoReleaser configuration. Validate with `make release-check`.
+# Docs: https://goreleaser.com
+version: 2
+
+project_name: mealie
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: mealie
+    main: ./cmd/mealie
+    binary: mealie
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w
+      - -X github.com/gloos/mealie-cli/internal/buildinfo.Version={{ .Version }}
+      - -X github.com/gloos/mealie-cli/internal/buildinfo.Commit={{ .ShortCommit }}
+      - -X github.com/gloos/mealie-cli/internal/buildinfo.Date={{ .Date }}
+
+archives:
+  - id: default
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+
+checksum:
+  name_template: "checksums.txt"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+      - "Merge pull request"
+
+# Homebrew (macOS) via the modern cask pipeline. The legacy `brews` (formula)
+# pipeline is deprecated in GoReleaser v2. To enable publishing, create a
+# `gloos/homebrew-tap` repository and add a HOMEBREW_TAP_GITHUB_TOKEN secret
+# with write access to it, then uncomment this block.
+#
+# homebrew_casks:
+#   - name: mealie
+#     binary: mealie
+#     repository:
+#       owner: gloos
+#       name: homebrew-tap
+#       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+#     homepage: "https://github.com/gloos/mealie-cli"
+#     description: "Fast, scriptable, agent-friendly CLI for Mealie"
+#     hooks:
+#       post:
+#         install: |
+#           if OS.mac?
+#             system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/mealie"]
+#           end
+
+release:
+  prerelease: auto
+  footer: |
+    ---
+    Install: download the archive for your platform, or `go install github.com/gloos/mealie-cli/cmd/mealie@{{ .Tag }}`.

@@ -1,0 +1,23 @@
+# Binaries
+/bin/
+/dist/
+mealie
+*.exe
+
+# Test & coverage output
+*.out
+coverage.txt
+coverage.html
+
+# Local environment / secrets
+.env
+.env.*
+*.local.yaml
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
+
+# Local-only / maintainer documentation — never published
+docs/internal/

@@ -1,0 +1,25 @@
+name: Feature request
+description: Suggest an idea or improvement for Mealie CLI
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem are you trying to solve?
+      description: Describe the use case or pain point, not just the solution.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What would you like Mealie CLI to do? An example command helps.
+      placeholder: e.g. `mealie recipe export <slug> --format pdf`
+    validations:
+      required: false
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+    validations:
+      required: false

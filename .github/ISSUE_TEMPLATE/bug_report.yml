@@ -1,0 +1,52 @@
+name: Bug report
+description: Report a problem with Mealie CLI
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug! Please fill in the details
+        below so we can reproduce and fix it quickly.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear description of the bug, and what you expected instead.
+      placeholder: When I run `mealie recipe list` ...
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: The exact commands you ran. Redact any tokens or private URLs.
+      render: shell
+    validations:
+      required: true
+  - type: input
+    id: cli-version
+    attributes:
+      label: Mealie CLI version
+      description: Output of `mealie version`.
+    validations:
+      required: true
+  - type: input
+    id: server-version
+    attributes:
+      label: Mealie server version
+      description: From `mealie doctor` or your server's About page.
+    validations:
+      required: false
+  - type: input
+    id: os
+    attributes:
+      label: OS / architecture
+      placeholder: macOS 15 arm64
+    validations:
+      required: false
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant output
+      description: Re-run with `--output json` if helpful. Redact secrets.
+      render: shell

@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Mealie server (upstream) issues
+    url: https://github.com/mealie-recipes/mealie/issues
+    about: This is the unofficial CLI. For bugs in the Mealie server itself, please use the upstream tracker.
+  - name: Question or discussion
+    url: https://github.com/gloos/mealie-cli/discussions
+    about: Ask questions and share ideas here.
