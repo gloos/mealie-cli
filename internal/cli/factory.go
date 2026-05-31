@@ -2,7 +2,10 @@ package cli
 
 import (
 	"context"
+	"fmt"
 	"io"
+	"net"
+	"net/url"
 	"time"
 
 	"github.com/gloos/mealie-cli/internal/config"
@@ -90,10 +93,34 @@ func (f *Factory) Client(_ context.Context) (*core.Client, error) {
 		return nil, newError(ExitConfig, "auth", "no API token configured",
 			"run `mealie auth login` or set --token / MEALIE_TOKEN")
 	}
+	f.warnInsecureTransport(res.BaseURL, res.Token)
 	return core.New(res.BaseURL, res.Token,
 		core.WithUserAgent(userAgent()),
 		core.WithTimeout(f.opts.timeout),
 	)
+}
+
+// warnInsecureTransport warns on stderr when a token would be sent over a
+// plaintext http connection to a non-loopback host, where it could be captured
+// in transit. http to localhost is common for self-hosted Mealie and is not
+// flagged. The warning is intentionally not silenced by --quiet.
+func (f *Factory) warnInsecureTransport(baseURL, token string) {
+	if token == "" {
+		return
+	}
+	u, err := url.Parse(baseURL)
+	if err != nil || u.Scheme != "http" {
+		return
+	}
+	host := u.Hostname()
+	if host == "localhost" {
+		return
+	}
+	if ip := net.ParseIP(host); ip != nil && ip.IsLoopback() {
+		return
+	}
+	fmt.Fprintf(f.Err, "warning: sending your API token over an unencrypted http connection to %s; "+
+		"anyone on the network path can read it. Use https to protect it in transit.\n", host)
 }
 
 // clientPrinter is the common setup for commands that talk to the API.

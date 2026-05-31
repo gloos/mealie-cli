@@ -40,6 +40,26 @@ archives:
 checksum:
   name_template: "checksums.txt"
 
+# Keyless cosign signatures over the checksums file (which in turn covers every
+# archive). Lets users verify a download came from this repo's release pipeline:
+#   cosign verify-blob \
+#     --certificate checksums.txt.pem \
+#     --signature  checksums.txt.sig \
+#     --certificate-identity-regexp 'https://github.com/gloos/mealie-cli/.*' \
+#     --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+#     checksums.txt
+signs:
+  - cmd: cosign
+    certificate: "${artifact}.pem"
+    args:
+      - sign-blob
+      - "--output-certificate=${certificate}"
+      - "--output-signature=${signature}"
+      - "${artifact}"
+      - "--yes"
+    artifacts: checksum
+    output: true
+
 changelog:
   sort: asc
   filters:

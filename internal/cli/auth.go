@@ -36,6 +36,15 @@ func newAuthLoginCmd(f *Factory) *cobra.Command {
 				return err
 			}
 
+			if password != "" {
+				fmt.Fprintln(f.Err, "warning: --password on the command line is visible to other users "+
+					"via the process list and shell history; prefer interactive entry.")
+			}
+			if f.opts.token != "" {
+				fmt.Fprintln(f.Err, "warning: --token on the command line is visible to other users "+
+					"via the process list and shell history; prefer MEALIE_TOKEN or interactive entry.")
+			}
+
 			baseURL := f.opts.url
 			if baseURL == "" {
 				if res, _, _, rerr := f.resolved(); rerr == nil {
