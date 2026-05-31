@@ -1,7 +1,8 @@
-# Binaries
+# Binaries (anchored to repo root so the cmd/mealie package and
+# api/specs/mealie directory are NOT ignored)
 /bin/
 /dist/
-mealie
+/mealie
 *.exe
 
 # Test & coverage output

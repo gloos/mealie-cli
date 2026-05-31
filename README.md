@@ -51,11 +51,11 @@ Added dinner entry for 2026-06-02 (id 41)
 
 ## Install
 
-### Homebrew
+### Prebuilt binaries
 
-```sh
-brew install gloos/tap/mealie
-```
+Download an archive for your platform from the
+[Releases](https://github.com/gloos/mealie-cli/releases) page, extract it, and
+put the `mealie` binary on your `PATH`.
 
 ### Go
 
@@ -63,11 +63,7 @@ brew install gloos/tap/mealie
 go install github.com/gloos/mealie-cli/cmd/mealie@latest
 ```
 
-### Prebuilt binaries
-
-Download an archive for your platform from the
-[Releases](https://github.com/gloos/mealie-cli/releases) page, extract it, and
-put the `mealie` binary on your `PATH`.
+> Homebrew distribution is planned for a future release.
 
 Verify the install:
 

@@ -49,26 +49,11 @@ changelog:
       - "^chore:"
       - "Merge pull request"
 
-# Homebrew (macOS) via the modern cask pipeline. The legacy `brews` (formula)
-# pipeline is deprecated in GoReleaser v2. To enable publishing, create a
-# `gloos/homebrew-tap` repository and add a HOMEBREW_TAP_GITHUB_TOKEN secret
-# with write access to it, then uncomment this block.
-#
-# homebrew_casks:
-#   - name: mealie
-#     binary: mealie
-#     repository:
-#       owner: gloos
-#       name: homebrew-tap
-#       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
-#     homepage: "https://github.com/gloos/mealie-cli"
-#     description: "Fast, scriptable, agent-friendly CLI for Mealie"
-#     hooks:
-#       post:
-#         install: |
-#           if OS.mac?
-#             system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/mealie"]
-#           end
+# Homebrew publishing is intentionally not configured yet. To add it later, set
+# up a `homebrew_casks` block (the v2 replacement for the deprecated `brews`
+# pipeline) targeting a dedicated tap repository, plus a HOMEBREW_TAP_GITHUB_TOKEN
+# secret with write access to that tap.
+# See https://goreleaser.com/customization/homebrew_casks/
 
 release:
   prerelease: auto
