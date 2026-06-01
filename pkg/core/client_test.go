@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync/atomic"
 	"testing"
 )
@@ -172,6 +173,102 @@ func TestAddShoppingItemDecodesCollection(t *testing.T) {
 	}
 	if item.ID != "new1" || item.Note != "2 onions" {
 		t.Fatalf("unexpected created item: %+v", item)
+	}
+}
+
+func TestExportRecipeReturnsRawBody(t *testing.T) {
+	// A field the curated Recipe struct does not model, to prove export is lossless.
+	const body = `{"id":"r1","slug":"curry","name":"Curry","settings":{"public":true},"extras":{"k":"v"}}`
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/recipes/curry" || r.Method != http.MethodGet {
+			http.NotFound(w, r)
+			return
+		}
+		_, _ = w.Write([]byte(body))
+	}))
+	defer srv.Close()
+
+	c, _ := New(srv.URL, "tok")
+	raw, err := c.ExportRecipe(context.Background(), "curry")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(raw) != body {
+		t.Fatalf("raw body = %s\nwant %s", raw, body)
+	}
+}
+
+func TestAddRecipesToShoppingList(t *testing.T) {
+	var gotMethod, gotPath string
+	var gotBody []map[string]any
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotMethod, gotPath = r.Method, r.URL.Path
+		_ = json.NewDecoder(r.Body).Decode(&gotBody)
+		_, _ = w.Write([]byte(`{"id":"l1","name":"Weekly","listItems":[` +
+			`{"id":"i1","shoppingListId":"l1","note":"2 onions"},` +
+			`{"id":"i2","shoppingListId":"l1","note":"1 tin tomatoes"}]}`))
+	}))
+	defer srv.Close()
+
+	c, _ := New(srv.URL, "tok")
+	list, err := c.AddRecipesToShoppingList(context.Background(), "l1", []AddRecipeToList{{RecipeID: "r1"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if gotMethod != http.MethodPost {
+		t.Errorf("method = %q, want POST", gotMethod)
+	}
+	if gotPath != "/api/households/shopping/lists/l1/recipe" {
+		t.Errorf("path = %q", gotPath)
+	}
+	// The body must be an array (the non-deprecated bulk endpoint), with a single
+	// element here.
+	if len(gotBody) != 1 {
+		t.Fatalf("request body should be a one-element array, got %v", gotBody)
+	}
+	if gotBody[0]["recipeId"] != "r1" {
+		t.Errorf("recipeId = %v, want r1", gotBody[0]["recipeId"])
+	}
+	// An unset scale must be omitted so the server applies its default.
+	if _, ok := gotBody[0]["recipeIncrementQuantity"]; ok {
+		t.Errorf("recipeIncrementQuantity must be omitted when scale is unset; body = %v", gotBody[0])
+	}
+	if list.Name != "Weekly" || len(list.ListItems) != 2 {
+		t.Fatalf("unexpected list: %+v", list)
+	}
+}
+
+// TestAddRecipeToListScaleEncoding pins the omitempty trade-off the request
+// struct depends on: an unset scale is dropped (server default applies) while an
+// explicit scale is sent.
+func TestAddRecipeToListScaleEncoding(t *testing.T) {
+	b, err := json.Marshal(AddRecipeToList{RecipeID: "r1"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(b), "recipeIncrementQuantity") {
+		t.Errorf("unset scale must be omitted, got %s", b)
+	}
+	b, err = json.Marshal(AddRecipeToList{RecipeID: "r1", Scale: 2})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(b), `"recipeIncrementQuantity":2`) {
+		t.Errorf("explicit scale must be sent, got %s", b)
+	}
+}
+
+func TestAddRecipesToShoppingListValidationError(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusUnprocessableEntity)
+		_, _ = w.Write([]byte(`{"detail":[{"loc":["body",0,"recipeId"],"msg":"field required","type":"missing"}]}`))
+	}))
+	defer srv.Close()
+
+	c, _ := New(srv.URL, "tok")
+	_, err := c.AddRecipesToShoppingList(context.Background(), "l1", []AddRecipeToList{{}})
+	if !IsValidation(err) {
+		t.Fatalf("expected a validation error, got %v", err)
 	}
 }
 

@@ -134,7 +134,31 @@ configuration section).
   relying on server defaults.
 - Use `--all` to fetch every result, or `--page`/`--per-page` for explicit
   pagination. In JSON/YAML output, list results include a `pagination` object.
+  `--all` walks the result set **client-side**, fetching pages in batches sized by
+  `--per-page` (or recipe's `--limit`, default 100) until they are exhausted, so a
+  large instance degrades gracefully rather than failing on one oversized
+  response. Because it spans every page, `--all` cannot be combined with an
+  explicit `--page` — doing so is a usage error (exit 2), as is a negative
+  `--per-page`/`--limit`.
 - Timestamps are passed through from Mealie unchanged.
+
+## Building shopping lists and backups
+
+- `mealie shopping recipe add <recipe-slug> --list <id>` pushes a recipe's
+  ingredients onto a shopping list (the core meal-planning move). Resolve the
+  slug yourself with `--recipe-id <uuid>` to skip the lookup, and `--scale N` to
+  multiply quantities. The confirmation reports the list's **total** item count
+  ("now N items"), not just what was added.
+- `mealie recipe export <slug>…` writes raw, lossless recipe JSON (every field the
+  server sends, unlike the curated `recipe get`). With no `-O` a single recipe
+  goes to stdout — composable in a pipeline. `-O <dir>` (a trailing slash or an
+  existing directory) writes `<slug>.json` per recipe; `-O <file>` writes one
+  recipe there. `--all` exports everything and requires `-O <dir>`. Existing files
+  are never clobbered without `--force` (exit 5 otherwise). A multi-recipe export
+  is all-or-nothing — every recipe is staged before any is published, so a mid-run
+  failure leaves existing backups untouched — and files are written owner-only
+  (`0600`) because the JSON is lossless and may carry private data. In a machine
+  format, `recipe export` to file(s) emits `{"written":[…],"dir":"…"}` on stdout.
 
 ## A note on MCP
 

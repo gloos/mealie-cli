@@ -59,10 +59,17 @@ func newMealplanListCmd(f *Factory) *cobra.Command {
 				return err
 			}
 			opts := core.ListOptions{Page: page, PerPage: perPage}
+			var res *core.Page[core.MealPlan]
 			if all {
-				opts.PerPage = -1
+				res, err = fetchAllPage(cmd, perPage, func(page, pp int) (*core.Page[core.MealPlan], error) {
+					o := opts
+					o.Page = page
+					o.PerPage = pp
+					return c.ListMealPlans(ctx, o, start, end)
+				})
+			} else {
+				res, err = c.ListMealPlans(ctx, opts, start, end)
 			}
-			res, err := c.ListMealPlans(ctx, opts, start, end)
 			if err != nil {
 				return err
 			}
@@ -76,7 +83,7 @@ func newMealplanListCmd(f *Factory) *cobra.Command {
 	flags.StringVar(&end, "end", "", "end date (YYYY-MM-DD)")
 	flags.IntVar(&page, "page", 0, "page number (1-based)")
 	flags.IntVar(&perPage, "per-page", 0, "results per page")
-	flags.BoolVar(&all, "all", false, "fetch all results (no pagination)")
+	flags.BoolVar(&all, "all", false, "fetch every result, paginating client-side in --per-page batches")
 	return cmd
 }
 

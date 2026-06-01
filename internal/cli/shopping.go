@@ -23,6 +23,7 @@ func newShoppingCmd(f *Factory) *cobra.Command {
 		newShoppingCreateCmd(f),
 		newShoppingDeleteCmd(f),
 		newShoppingItemCmd(f),
+		newShoppingRecipeCmd(f),
 	)
 	return cmd
 }
@@ -43,10 +44,17 @@ func newShoppingListCmd(f *Factory) *cobra.Command {
 				return err
 			}
 			opts := core.ListOptions{Page: page, PerPage: perPage}
+			var res *core.Page[core.ShoppingList]
 			if all {
-				opts.PerPage = -1
+				res, err = fetchAllPage(cmd, perPage, func(page, pp int) (*core.Page[core.ShoppingList], error) {
+					o := opts
+					o.Page = page
+					o.PerPage = pp
+					return c.ListShoppingLists(ctx, o)
+				})
+			} else {
+				res, err = c.ListShoppingLists(ctx, opts)
 			}
-			res, err := c.ListShoppingLists(ctx, opts)
 			if err != nil {
 				return err
 			}
@@ -62,7 +70,7 @@ func newShoppingListCmd(f *Factory) *cobra.Command {
 	flags := cmd.Flags()
 	flags.IntVar(&page, "page", 0, "page number (1-based)")
 	flags.IntVar(&perPage, "per-page", 0, "results per page")
-	flags.BoolVar(&all, "all", false, "fetch all results (no pagination)")
+	flags.BoolVar(&all, "all", false, "fetch every result, paginating client-side in --per-page batches")
 	return cmd
 }
 
@@ -253,6 +261,69 @@ func newShoppingItemDeleteCmd(f *Factory) *cobra.Command {
 		},
 	}
 	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "skip the confirmation prompt")
+	return cmd
+}
+
+func newShoppingRecipeCmd(f *Factory) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "recipe",
+		Short: "Manage recipes on a shopping list",
+	}
+	cmd.AddCommand(
+		newShoppingRecipeAddCmd(f),
+	)
+	return cmd
+}
+
+func newShoppingRecipeAddCmd(f *Factory) *cobra.Command {
+	var listID, recipeID string
+	var scale float64
+	cmd := &cobra.Command{
+		Use:   "add <recipe-slug>",
+		Short: "Add a recipe's ingredients to a shopping list",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := cmd.Context()
+			c, p, err := f.clientPrinter(ctx)
+			if err != nil {
+				return err
+			}
+			if scale <= 0 {
+				return usageError(fmt.Sprintf("--scale must be positive, got %v", scale))
+			}
+			// Resolve the slug to a recipe id the same way `mealplan add` does;
+			// --recipe-id skips the lookup.
+			if recipeID == "" {
+				r, gerr := c.GetRecipe(ctx, args[0])
+				if gerr != nil {
+					return gerr
+				}
+				recipeID = r.ID
+			}
+			req := core.AddRecipeToList{RecipeID: recipeID}
+			// Only send a scale when the user set one, so an untouched flag leaves
+			// the server's default of 1 in place rather than overriding it.
+			if cmd.Flags().Changed("scale") {
+				req.Scale = scale
+			}
+			list, err := c.AddRecipesToShoppingList(ctx, listID, []core.AddRecipeToList{req})
+			if err != nil {
+				return err
+			}
+			// listItems is the whole list, not just what we added, so the count is
+			// reported as a total ("now N items") rather than an added count.
+			p.Info("Added recipe to list %s (now %d items)", listID, len(list.ListItems))
+			return p.Emit(list, func(w io.Writer) error {
+				shoppingListDetail(w, list)
+				return nil
+			})
+		},
+	}
+	flags := cmd.Flags()
+	flags.StringVar(&listID, "list", "", "shopping list id (required)")
+	flags.Float64Var(&scale, "scale", 1, "recipe scale factor (servings multiplier)")
+	flags.StringVar(&recipeID, "recipe-id", "", "recipe UUID (skips the slug lookup)")
+	_ = cmd.MarkFlagRequired("list")
 	return cmd
 }
 
