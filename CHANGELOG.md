@@ -6,6 +6,28 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-06-01
+
+### Documentation
+
+- Clarified the agent contract in [`docs/agents.md`](docs/agents.md): a
+  destructive command refused without `--yes` fails exit 2 with the error `code`
+  `confirmation_required`; `--quiet` silences incidental messages but never the
+  error envelope; and the error `code` vocabulary now distinguishes API/transport
+  codes from CLI-side ones (`usage`, `confirmation_required`, `config`, `exists`).
+  No behaviour changed — these guarantees are now pinned by end-to-end contract
+  tests.
+
+### Internal
+
+- The agent contract is now verified end-to-end: the `classify` exit-code table,
+  the full JSON error envelope per error class, stdout/stderr separation in every
+  output format, the `--no-input`/`--quiet`/`--yes` boundaries, the env-driven
+  automation path, and the process-level exit code (via a subprocess smoke test).
+  Human-facing renderers and the `schema` discovery tree are pinned with golden
+  files. `Main()` gained a small behaviour-preserving `run()` seam so the contract
+  is driven through the real code path rather than a copy.
+
 ## [0.3.0] - 2026-06-01
 
 ### Added

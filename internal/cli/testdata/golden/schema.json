@@ -1,0 +1,610 @@
+{
+  "name": "mealie",
+  "path": "mealie",
+  "short": "Manage Mealie recipes, meal plans and shopping lists",
+  "global_flags": [
+    {
+      "name": "config",
+      "usage": "config file path (env MEALIE_CONFIG)",
+      "type": "string"
+    },
+    {
+      "name": "no-color",
+      "usage": "disable colour output",
+      "type": "bool",
+      "default": "false"
+    },
+    {
+      "name": "no-input",
+      "usage": "never prompt; fail instead (for scripts and agents)",
+      "type": "bool",
+      "default": "false"
+    },
+    {
+      "name": "output",
+      "shorthand": "o",
+      "usage": "output format: table|json|ndjson|yaml (env MEALIE_OUTPUT)",
+      "type": "string"
+    },
+    {
+      "name": "profile",
+      "shorthand": "p",
+      "usage": "configuration profile (env MEALIE_PROFILE)",
+      "type": "string"
+    },
+    {
+      "name": "quiet",
+      "shorthand": "q",
+      "usage": "suppress incidental messages on stderr",
+      "type": "bool",
+      "default": "false"
+    },
+    {
+      "name": "timeout",
+      "usage": "HTTP request timeout",
+      "type": "duration",
+      "default": "30s"
+    },
+    {
+      "name": "token",
+      "usage": "API token (env MEALIE_TOKEN)",
+      "type": "string"
+    },
+    {
+      "name": "url",
+      "usage": "Mealie server base URL (env MEALIE_URL)",
+      "type": "string"
+    }
+  ],
+  "commands": [
+    {
+      "name": "auth",
+      "path": "mealie auth",
+      "short": "Authenticate against a Mealie server",
+      "commands": [
+        {
+          "name": "login",
+          "path": "mealie auth login",
+          "short": "Log in and store credentials in a profile",
+          "flags": [
+            {
+              "name": "name",
+              "usage": "name for the long-lived API token minted on password login",
+              "type": "string",
+              "default": "mealie-cli"
+            },
+            {
+              "name": "password",
+              "usage": "password for password login (prefer interactive entry)",
+              "type": "string"
+            },
+            {
+              "name": "username",
+              "shorthand": "u",
+              "usage": "username for password login",
+              "type": "string"
+            }
+          ]
+        },
+        {
+          "name": "logout",
+          "path": "mealie auth logout",
+          "short": "Remove the stored token for the active profile"
+        },
+        {
+          "name": "status",
+          "path": "mealie auth status",
+          "short": "Show the current authentication status"
+        }
+      ]
+    },
+    {
+      "name": "completion",
+      "path": "mealie completion",
+      "short": "Generate the autocompletion script for the specified shell",
+      "commands": [
+        {
+          "name": "bash",
+          "path": "mealie completion bash",
+          "short": "Generate the autocompletion script for bash",
+          "flags": [
+            {
+              "name": "no-descriptions",
+              "usage": "disable completion descriptions",
+              "type": "bool",
+              "default": "false"
+            }
+          ]
+        },
+        {
+          "name": "fish",
+          "path": "mealie completion fish",
+          "short": "Generate the autocompletion script for fish",
+          "flags": [
+            {
+              "name": "no-descriptions",
+              "usage": "disable completion descriptions",
+              "type": "bool",
+              "default": "false"
+            }
+          ]
+        },
+        {
+          "name": "powershell",
+          "path": "mealie completion powershell",
+          "short": "Generate the autocompletion script for powershell",
+          "flags": [
+            {
+              "name": "no-descriptions",
+              "usage": "disable completion descriptions",
+              "type": "bool",
+              "default": "false"
+            }
+          ]
+        },
+        {
+          "name": "zsh",
+          "path": "mealie completion zsh",
+          "short": "Generate the autocompletion script for zsh",
+          "flags": [
+            {
+              "name": "no-descriptions",
+              "usage": "disable completion descriptions",
+              "type": "bool",
+              "default": "false"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "config",
+      "path": "mealie config",
+      "short": "Manage CLI configuration and profiles",
+      "commands": [
+        {
+          "name": "list",
+          "path": "mealie config list",
+          "short": "List configured profiles",
+          "aliases": [
+            "ls"
+          ]
+        },
+        {
+          "name": "path",
+          "path": "mealie config path",
+          "short": "Print the config file path"
+        },
+        {
+          "name": "use",
+          "path": "mealie config use",
+          "short": "Set the active profile"
+        },
+        {
+          "name": "view",
+          "path": "mealie config view",
+          "short": "Show the effective configuration after applying flags and environment"
+        }
+      ]
+    },
+    {
+      "name": "doctor",
+      "path": "mealie doctor",
+      "short": "Diagnose connectivity, authentication and server compatibility"
+    },
+    {
+      "name": "mealplan",
+      "path": "mealie mealplan",
+      "short": "Manage meal plans",
+      "aliases": [
+        "mealplans",
+        "plan"
+      ],
+      "commands": [
+        {
+          "name": "add",
+          "path": "mealie mealplan add",
+          "short": "Add a meal plan entry",
+          "flags": [
+            {
+              "name": "date",
+              "usage": "date for the entry (YYYY-MM-DD, default today)",
+              "type": "string"
+            },
+            {
+              "name": "recipe",
+              "usage": "slug of an existing recipe to plan",
+              "type": "string"
+            },
+            {
+              "name": "recipe-id",
+              "usage": "UUID of an existing recipe to plan",
+              "type": "string"
+            },
+            {
+              "name": "text",
+              "usage": "note text for a free-text entry",
+              "type": "string"
+            },
+            {
+              "name": "title",
+              "usage": "title for a free-text entry",
+              "type": "string"
+            },
+            {
+              "name": "type",
+              "usage": "entry type: breakfast|lunch|dinner|side|snack|drink|dessert",
+              "type": "string",
+              "default": "dinner"
+            }
+          ]
+        },
+        {
+          "name": "delete",
+          "path": "mealie mealplan delete",
+          "short": "Delete a meal plan entry by id",
+          "aliases": [
+            "rm"
+          ],
+          "flags": [
+            {
+              "name": "yes",
+              "shorthand": "y",
+              "usage": "skip the confirmation prompt",
+              "type": "bool",
+              "default": "false"
+            }
+          ]
+        },
+        {
+          "name": "list",
+          "path": "mealie mealplan list",
+          "short": "List meal plan entries, optionally within a date range",
+          "flags": [
+            {
+              "name": "all",
+              "usage": "fetch every result, paginating client-side in --per-page batches",
+              "type": "bool",
+              "default": "false"
+            },
+            {
+              "name": "end",
+              "usage": "end date (YYYY-MM-DD)",
+              "type": "string"
+            },
+            {
+              "name": "page",
+              "usage": "page number (1-based)",
+              "type": "int",
+              "default": "0"
+            },
+            {
+              "name": "per-page",
+              "usage": "results per page",
+              "type": "int",
+              "default": "0"
+            },
+            {
+              "name": "start",
+              "usage": "start date (YYYY-MM-DD)",
+              "type": "string"
+            }
+          ]
+        },
+        {
+          "name": "today",
+          "path": "mealie mealplan today",
+          "short": "Show today's meal plan entries"
+        }
+      ]
+    },
+    {
+      "name": "recipe",
+      "path": "mealie recipe",
+      "short": "Manage recipes",
+      "aliases": [
+        "recipes"
+      ],
+      "commands": [
+        {
+          "name": "create",
+          "path": "mealie recipe create",
+          "short": "Create a new empty recipe"
+        },
+        {
+          "name": "delete",
+          "path": "mealie recipe delete",
+          "short": "Delete a recipe by slug",
+          "aliases": [
+            "rm"
+          ],
+          "flags": [
+            {
+              "name": "yes",
+              "shorthand": "y",
+              "usage": "skip the confirmation prompt",
+              "type": "bool",
+              "default": "false"
+            }
+          ]
+        },
+        {
+          "name": "export",
+          "path": "mealie recipe export",
+          "short": "Export recipes as lossless JSON (for backup)",
+          "flags": [
+            {
+              "name": "all",
+              "usage": "export every recipe (requires -O <dir>)",
+              "type": "bool",
+              "default": "false"
+            },
+            {
+              "name": "force",
+              "usage": "overwrite existing files",
+              "type": "bool",
+              "default": "false"
+            },
+            {
+              "name": "output-file",
+              "shorthand": "O",
+              "usage": "write to this file or directory (default: stdout for a single recipe)",
+              "type": "string"
+            }
+          ]
+        },
+        {
+          "name": "get",
+          "path": "mealie recipe get",
+          "short": "Show a recipe by slug"
+        },
+        {
+          "name": "import",
+          "path": "mealie recipe import",
+          "short": "Import a recipe by scraping a URL",
+          "flags": [
+            {
+              "name": "tags",
+              "usage": "import tags from the source site",
+              "type": "bool",
+              "default": "true"
+            }
+          ]
+        },
+        {
+          "name": "list",
+          "path": "mealie recipe list",
+          "short": "List recipes",
+          "flags": [
+            {
+              "name": "all",
+              "usage": "fetch every result, paginating client-side in --per-page/--limit batches",
+              "type": "bool",
+              "default": "false"
+            },
+            {
+              "name": "category",
+              "usage": "filter by category (repeatable)",
+              "type": "stringSlice",
+              "default": "[]"
+            },
+            {
+              "name": "cookbook",
+              "usage": "filter by cookbook slug",
+              "type": "string"
+            },
+            {
+              "name": "limit",
+              "usage": "max results in one page (alias for --per-page; use --all to fetch everything)",
+              "type": "int",
+              "default": "0"
+            },
+            {
+              "name": "order",
+              "usage": "order direction: asc or desc",
+              "type": "string"
+            },
+            {
+              "name": "order-by",
+              "usage": "field to order by (e.g. name, created_at)",
+              "type": "string"
+            },
+            {
+              "name": "page",
+              "usage": "page number (1-based)",
+              "type": "int",
+              "default": "0"
+            },
+            {
+              "name": "per-page",
+              "usage": "results per page",
+              "type": "int",
+              "default": "0"
+            },
+            {
+              "name": "search",
+              "shorthand": "s",
+              "usage": "full-text search query",
+              "type": "string"
+            },
+            {
+              "name": "tag",
+              "usage": "filter by tag (repeatable)",
+              "type": "stringSlice",
+              "default": "[]"
+            },
+            {
+              "name": "tool",
+              "usage": "filter by tool (repeatable)",
+              "type": "stringSlice",
+              "default": "[]"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "schema",
+      "path": "mealie schema",
+      "short": "Print the command tree as JSON for programmatic discovery",
+      "flags": [
+        {
+          "name": "help",
+          "shorthand": "h",
+          "usage": "help for schema",
+          "type": "bool",
+          "default": "false"
+        }
+      ]
+    },
+    {
+      "name": "shopping",
+      "path": "mealie shopping",
+      "short": "Manage shopping lists",
+      "aliases": [
+        "shop"
+      ],
+      "commands": [
+        {
+          "name": "create",
+          "path": "mealie shopping create",
+          "short": "Create a new shopping list"
+        },
+        {
+          "name": "delete",
+          "path": "mealie shopping delete",
+          "short": "Delete a shopping list",
+          "aliases": [
+            "rm"
+          ],
+          "flags": [
+            {
+              "name": "yes",
+              "shorthand": "y",
+              "usage": "skip the confirmation prompt",
+              "type": "bool",
+              "default": "false"
+            }
+          ]
+        },
+        {
+          "name": "get",
+          "path": "mealie shopping get",
+          "short": "Show a shopping list and its items"
+        },
+        {
+          "name": "item",
+          "path": "mealie shopping item",
+          "short": "Manage shopping list items",
+          "commands": [
+            {
+              "name": "add",
+              "path": "mealie shopping item add",
+              "short": "Add a free-text item to a shopping list",
+              "flags": [
+                {
+                  "name": "list",
+                  "usage": "shopping list id (required)",
+                  "type": "string"
+                },
+                {
+                  "name": "quantity",
+                  "usage": "quantity for the item",
+                  "type": "float64",
+                  "default": "0"
+                }
+              ]
+            },
+            {
+              "name": "check",
+              "path": "mealie shopping item check",
+              "short": "Check off a shopping list item"
+            },
+            {
+              "name": "delete",
+              "path": "mealie shopping item delete",
+              "short": "Delete a shopping list item",
+              "aliases": [
+                "rm"
+              ],
+              "flags": [
+                {
+                  "name": "yes",
+                  "shorthand": "y",
+                  "usage": "skip the confirmation prompt",
+                  "type": "bool",
+                  "default": "false"
+                }
+              ]
+            },
+            {
+              "name": "uncheck",
+              "path": "mealie shopping item uncheck",
+              "short": "Uncheck a shopping list item"
+            }
+          ]
+        },
+        {
+          "name": "list",
+          "path": "mealie shopping list",
+          "short": "List shopping lists",
+          "flags": [
+            {
+              "name": "all",
+              "usage": "fetch every result, paginating client-side in --per-page batches",
+              "type": "bool",
+              "default": "false"
+            },
+            {
+              "name": "page",
+              "usage": "page number (1-based)",
+              "type": "int",
+              "default": "0"
+            },
+            {
+              "name": "per-page",
+              "usage": "results per page",
+              "type": "int",
+              "default": "0"
+            }
+          ]
+        },
+        {
+          "name": "recipe",
+          "path": "mealie shopping recipe",
+          "short": "Manage recipes on a shopping list",
+          "commands": [
+            {
+              "name": "add",
+              "path": "mealie shopping recipe add",
+              "short": "Add a recipe's ingredients to a shopping list",
+              "flags": [
+                {
+                  "name": "list",
+                  "usage": "shopping list id (required)",
+                  "type": "string"
+                },
+                {
+                  "name": "recipe-id",
+                  "usage": "recipe UUID (skips the slug lookup)",
+                  "type": "string"
+                },
+                {
+                  "name": "scale",
+                  "usage": "recipe scale factor (servings multiplier)",
+                  "type": "float64",
+                  "default": "1"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "version",
+      "path": "mealie version",
+      "short": "Print the CLI version and Mealie compatibility information"
+    }
+  ]
+}

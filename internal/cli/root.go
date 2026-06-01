@@ -71,20 +71,15 @@ func NewRootCommand(f *Factory) *cobra.Command {
 	return root
 }
 
-// Main is the program entry point. It returns the process exit code.
-func Main() int {
-	f := &Factory{
-		opts:   &globalOptions{},
-		getenv: os.Getenv,
-		In:     os.Stdin,
-		Out:    os.Stdout,
-		Err:    os.Stderr,
-	}
+// run builds the root command, executes it with the supplied context and args,
+// and returns the process exit code — classifying any error onto the exit-code
+// contract and writing the stable error envelope to stderr. It is the testable
+// core of Main: everything that defines the agent contract (run → classify →
+// EmitError → exit code) lives here, driven entirely by the injected Factory, so
+// a test can exercise the real path rather than a copy that could drift.
+func run(ctx context.Context, f *Factory, args []string) int {
 	root := NewRootCommand(f)
-
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
-
+	root.SetArgs(args)
 	if err := root.ExecuteContext(ctx); err != nil {
 		code, payload := classify(err)
 		if p, perr := f.Printer(); perr == nil {
@@ -95,4 +90,21 @@ func Main() int {
 		return code
 	}
 	return 0
+}
+
+// Main is the program entry point. It returns the process exit code. It wires
+// the real process streams and the signal-derived context, then defers all
+// contract behaviour to run; keeping Main this thin means the subprocess smoke
+// test (which execs the real binary) covers every branch it adds over run.
+func Main() int {
+	f := &Factory{
+		opts:   &globalOptions{},
+		getenv: os.Getenv,
+		In:     os.Stdin,
+		Out:    os.Stdout,
+		Err:    os.Stderr,
+	}
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	return run(ctx, f, os.Args[1:])
 }

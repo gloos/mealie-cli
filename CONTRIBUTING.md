@@ -64,6 +64,45 @@ implementation of each workflow that a future MCP server can reuse.
 - **Add tests** for new behaviour. New API calls should be covered by a unit
   test (using `httptest`) and, where relevant, a check in the contract tests.
 
+## Testing
+
+- **Real servers, not mocks.** Tests drive commands against an in-process
+  `httptest.Server` and assert the real round-trip — request method/path/body in,
+  data/exit code out. There is no HTTP mocking layer to drift from reality.
+- **The `runCLI` harness** (`internal/cli/harness_test.go`) is the backbone for
+  command-level tests. It drives the real `run()` entry point — the same one
+  `Main()` defers to — with buffered streams, an injectable `*http.Client` (use
+  `dialToServer(srv)` for a non-loopback URL, or pass `nil` to hit the server's
+  loopback address directly) and an injectable environment map, returning
+  `(stdout, stderr, exitCode)`. Because it goes through `run()`, it exercises the
+  genuine classify → error-envelope → exit-code path rather than a copy.
+
+  ```go
+  stdout, stderr, code := runCLI(t, cliRun{
+      args: []string{"recipe", "get", "curry", "--output", "json"},
+      env:  map[string]string{"MEALIE_URL": srv.URL, "MEALIE_TOKEN": "tok"},
+  })
+  ```
+
+- **The agent contract is pinned end-to-end** in `contract_cli_test.go`: the
+  `classify` exit-code table, the full error envelope per error class (whole
+  stderr parsed as one JSON object), success in every format, the
+  `--no-input`/`--quiet`/`--yes` boundaries, and the env-driven automation path.
+  A subprocess smoke test re-execs the test binary as the real CLI to assert the
+  genuine *process* exit code/stdout/stderr. If you change anything in that
+  contract, expect to update these tests deliberately.
+- **Golden files** (`internal/cli/testdata/golden/`) pin human-facing output (the
+  renderers and the `schema` tree) so a regression shows up as a reviewable diff.
+  Regenerate them after an intentional change with:
+
+  ```sh
+  MEALIE_UPDATE_GOLDEN=1 go test ./internal/cli/...
+  ```
+
+  Review the diff, then run the suite plainly to confirm it passes.
+- **Coverage:** `make cover`, or
+  `go test ./... -coverprofile=cov.out && go tool cover -func=cov.out`.
+
 ## Working with the Mealie API
 
 API types in `pkg/core` are **hand-written against the pinned OpenAPI spec** at

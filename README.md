@@ -219,7 +219,8 @@ contract so tools and agents can drive it reliably:
   {"error":{"code":"not_found","message":"recipe not found","http_status":404,"retryable":false}}
   ```
 - `--no-input` never prompts (fails instead), `--yes` confirms destructive
-  actions, and `--quiet` silences incidental stderr messages.
+  actions, and `--quiet` silences incidental stderr messages — but never the
+  error envelope, so a parser can always rely on it.
 - `mealie schema --output json` describes every command and flag for discovery.
 
 ```sh
@@ -286,9 +287,17 @@ See the [reference docs](https://pkg.go.dev/github.com/gloos/mealie-cli/pkg/core
 ```sh
 make build      # build ./bin/mealie
 make test       # run tests
+make cover      # run tests with a coverage summary
 make all        # fmt-check + vet + test + build
 make spec       # refresh the pinned OpenAPI spec from a Docker container
 ```
+
+Tests drive commands against real in-process `httptest` servers (no HTTP mocks),
+and the agent contract — exit codes, the JSON error envelope, stdout/stderr
+separation — is pinned end-to-end. Human-facing output (the renderers and the
+`schema` tree) is covered by golden files; after an intentional change,
+regenerate them with `MEALIE_UPDATE_GOLDEN=1 go test ./internal/cli/...`, review
+the diff, then re-run the suite. See [CONTRIBUTING.md](CONTRIBUTING.md#testing).
 
 Architecture and the rationale behind the big technical choices are recorded as
 [ADRs](docs/adr). Contributions are very welcome — start with

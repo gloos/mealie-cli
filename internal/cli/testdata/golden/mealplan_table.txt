@@ -1,0 +1,5 @@
+ID   DATE         TYPE        ENTRY
+1    2026-06-01   dinner      Curry night
+2    2026-06-02   lunch       Soup
+3    2026-06-03   snack       Leftovers
+4    2026-06-04   breakfast   -
