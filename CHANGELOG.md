@@ -6,6 +6,22 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Security
+
+- Pin the documented `cosign verify-blob` identity to this repo's tagged release
+  workflow (`…/.github/workflows/release.yml@refs/tags/v…`) instead of the
+  broader `…/mealie-cli/.*`, so a signature minted by any other workflow in the
+  repo can't satisfy the published verification command.
+
+### Changed
+
+- Release signing moved to cosign v3 (`sigstore/cosign-installer` bumped to
+  v4.1.2). `checksums.txt` is now signed into a single Sigstore bundle,
+  `checksums.txt.sigstore.json`, replacing the separate `checksums.txt.pem` and
+  `checksums.txt.sig` files. Verify with `cosign verify-blob --bundle
+  checksums.txt.sigstore.json …` (needs cosign v3+); the README has the full
+  two-step flow.
+
 ## [0.2.0] - 2026-06-01
 
 ### Security

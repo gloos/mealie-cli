@@ -60,17 +60,19 @@ put the `mealie` binary on your `PATH`.
 #### Verify the download (optional but recommended)
 
 Each release ships a `checksums.txt`, signed keyless with
-[cosign](https://docs.sigstore.dev/) via GitHub's OIDC identity. Verification is
-two steps: first confirm the signature on `checksums.txt`, then confirm your
-downloaded archive is listed in that now-trusted file. Download `checksums.txt`,
-`checksums.txt.pem` and `checksums.txt.sig` alongside your archive, then:
+[cosign](https://docs.sigstore.dev/) via GitHub's OIDC identity, so you can
+confirm it came from this repo's tagged release workflow. Releases after v0.2.0
+ship the signature as a single Sigstore bundle, `checksums.txt.sigstore.json`
+(verifying it needs cosign v3+). Verification is two steps: first confirm the
+signature on `checksums.txt`, then confirm your downloaded archive is listed in
+that now-trusted file. Download `checksums.txt` and `checksums.txt.sigstore.json`
+alongside your archive, then:
 
 ```sh
-# 1. Verify checksums.txt was signed by this repo's release pipeline.
+# 1. Verify checksums.txt was signed by this repo's tagged release workflow.
 cosign verify-blob \
-  --certificate checksums.txt.pem \
-  --signature checksums.txt.sig \
-  --certificate-identity-regexp 'https://github.com/gloos/mealie-cli/.*' \
+  --bundle checksums.txt.sigstore.json \
+  --certificate-identity-regexp '^https://github\.com/gloos/mealie-cli/\.github/workflows/release\.yml@refs/tags/v' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com \
   checksums.txt
 
@@ -81,6 +83,19 @@ shasum -a 256 --ignore-missing -c checksums.txt  # macOS
 ```
 
 Step 1 on its own does not verify any archive — both steps are required.
+
+v0.2.0 predates the bundle change and instead ships `checksums.txt.pem` and
+`checksums.txt.sig`; to verify it, replace step 1 with (works on cosign v2 or
+v3):
+
+```sh
+cosign verify-blob \
+  --certificate checksums.txt.pem \
+  --signature checksums.txt.sig \
+  --certificate-identity-regexp '^https://github\.com/gloos/mealie-cli/\.github/workflows/release\.yml@refs/tags/v' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+  checksums.txt
+```
 
 ### Go
 

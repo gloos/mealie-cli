@@ -41,15 +41,16 @@ checksum:
   name_template: "checksums.txt"
 
 # Keyless cosign signature over the checksums file, which in turn covers every
-# archive. Verifying a download is two steps — the signature establishes that
-# checksums.txt came from this repo's release pipeline, then the archive's digest
-# is checked against that now-trusted file:
+# archive. cosign v3 writes a single Sigstore bundle (checksums.txt.sigstore.json)
+# holding the certificate, signature and Rekor inclusion proof, replacing the
+# separate .pem/.sig files used under cosign v2. Verifying a download is two steps
+# — the signature establishes that checksums.txt came from this repo's release
+# pipeline, then the archive's digest is checked against that now-trusted file:
 #
-#   # 1. verify the signature on checksums.txt
+#   # 1. verify the signature on checksums.txt (needs cosign v3+)
 #   cosign verify-blob \
-#     --certificate checksums.txt.pem \
-#     --signature  checksums.txt.sig \
-#     --certificate-identity-regexp 'https://github.com/gloos/mealie-cli/.*' \
+#     --bundle checksums.txt.sigstore.json \
+#     --certificate-identity-regexp '^https://github\.com/gloos/mealie-cli/\.github/workflows/release\.yml@refs/tags/v' \
 #     --certificate-oidc-issuer https://token.actions.githubusercontent.com \
 #     checksums.txt
 #
@@ -61,11 +62,10 @@ checksum:
 # Verifying step 1 alone does NOT verify any archive; step 2 is required.
 signs:
   - cmd: cosign
-    certificate: "${artifact}.pem"
+    signature: "${artifact}.sigstore.json"
     args:
       - sign-blob
-      - "--output-certificate=${certificate}"
-      - "--output-signature=${signature}"
+      - "--bundle=${signature}"
       - "${artifact}"
       - "--yes"
     artifacts: checksum
