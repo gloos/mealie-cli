@@ -37,11 +37,15 @@ export MEALIE_OUTPUT=json
 
 A destructive command (`delete`) run without a TTY on **both** stdin and stderr
 will refuse to proceed unless `--yes` is given, rather than hanging or consuming
-piped input:
+piped input. The refusal is exit code 2 with the error `code` `confirmation_required`:
 
 ```sh
 mealie --no-input recipe delete old-recipe --yes
 ```
+
+`--quiet` silences incidental `Info` messages on stderr but **never** the error
+envelope: a failing command still emits the full JSON error to stderr so a parser
+can rely on it unconditionally.
 
 ## Errors
 
@@ -74,9 +78,13 @@ Field reference:
 | `hint`        | actionable next step                                           |
 | `details`     | structured extras, e.g. per-field validation errors            |
 
-Error `code` values: `usage`, `config`, `auth`, `forbidden`, `not_found`,
-`conflict`, `validation`, `bad_request`, `rate_limited`, `server_error`,
-`network`.
+Error `code` values from the API and transport: `auth`, `forbidden`,
+`not_found`, `conflict`, `validation`, `bad_request`, `rate_limited`,
+`server_error`, `network`. CLI-side failures add `usage`,
+`confirmation_required` (a destructive command refused without `--yes`), `config`
+(no server/token configured) and `exists` (refusing to overwrite a file without
+`--force`). Branch on the exit code for failure *class*; use `code` for the
+specific reason.
 
 ## Exit codes
 

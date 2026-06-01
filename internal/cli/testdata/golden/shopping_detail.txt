@@ -1,0 +1,5 @@
+Weekly (l1)
+      ID   QTY   ITEM
+[ ]   i1   2     2 onions
+[x]   i2   -     Eggs
+[ ]   i3   -     Salt

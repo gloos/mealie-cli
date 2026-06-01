@@ -356,6 +356,131 @@ func TestRecipeExportRejectsNDJSON(t *testing.T) {
 	}
 }
 
+// TestRecipeGet drives the curated single-recipe fetch: the GET path is hit and
+// the recipe lands on stdout as data only.
+func TestRecipeGet(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet && r.URL.Path == "/api/recipes/curry" {
+			_, _ = w.Write([]byte(`{"id":"r1","slug":"curry","name":"Curry","recipeYield":"4 servings"}`))
+			return
+		}
+		http.NotFound(w, r)
+	}))
+	defer srv.Close()
+
+	cfg := filepath.Join(t.TempDir(), "config.yaml")
+	stdout, stderr, code := runCLI(t, cliRun{args: []string{
+		"recipe", "get", "curry", "--url", srv.URL, "--token", "tok", "--config", cfg, "--output", "json",
+	}})
+	if code != 0 || stderr != "" {
+		t.Fatalf("code=%d stderr=%q", code, stderr)
+	}
+	var rec map[string]any
+	if uerr := json.Unmarshal([]byte(stdout), &rec); uerr != nil {
+		t.Fatalf("stdout not JSON: %v\n%s", uerr, stdout)
+	}
+	if rec["slug"] != "curry" || rec["recipeYield"] != "4 servings" {
+		t.Errorf("unexpected recipe: %#v", rec)
+	}
+}
+
+// TestRecipeCreate covers the create success path (POST verb+body, slug on
+// stdout, Info on stderr) and the validation failure mode (422 → exit 6 with the
+// per-field details surfaced).
+func TestRecipeCreate(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		var gotBody map[string]any
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.Method == http.MethodPost && r.URL.Path == "/api/recipes" {
+				_ = json.NewDecoder(r.Body).Decode(&gotBody)
+				_, _ = w.Write([]byte(`"curry"`))
+				return
+			}
+			http.NotFound(w, r)
+		}))
+		defer srv.Close()
+
+		cfg := filepath.Join(t.TempDir(), "config.yaml")
+		stdout, stderr, code := runCLI(t, cliRun{args: []string{
+			"recipe", "create", "Curry", "--url", srv.URL, "--token", "tok", "--config", cfg, "--output", "json",
+		}})
+		if code != 0 {
+			t.Fatalf("exit = %d\nstderr:\n%s", code, stderr)
+		}
+		if gotBody["name"] != "Curry" {
+			t.Errorf("POST body name = %v, want Curry", gotBody["name"])
+		}
+		var doc map[string]string
+		if err := json.Unmarshal([]byte(stdout), &doc); err != nil {
+			t.Fatalf("stdout not JSON: %v\n%s", err, stdout)
+		}
+		if doc["slug"] != "curry" {
+			t.Errorf("slug = %q, want curry", doc["slug"])
+		}
+		if !strings.Contains(stderr, "Created recipe") {
+			t.Errorf("expected Info on stderr, got:\n%s", stderr)
+		}
+	})
+
+	t.Run("validation failure", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusUnprocessableEntity)
+			_, _ = w.Write([]byte(`{"detail":[{"loc":["body","name"],"msg":"field required"}]}`))
+		}))
+		defer srv.Close()
+
+		cfg := filepath.Join(t.TempDir(), "config.yaml")
+		stdout, stderr, code := runCLI(t, cliRun{args: []string{
+			"recipe", "create", "x", "--url", srv.URL, "--token", "tok", "--config", cfg, "--output", "json",
+		}})
+		if code != ExitValidation {
+			t.Fatalf("exit = %d, want %d (validation)\nstderr:\n%s", code, ExitValidation, stderr)
+		}
+		if stdout != "" {
+			t.Errorf("stdout must be empty on error, got:\n%s", stdout)
+		}
+		pl, raw := decodeErrorEnvelope(t, stderr)
+		if pl.Code != "validation" {
+			t.Errorf("code = %q, want validation", pl.Code)
+		}
+		if raw["details"] == nil {
+			t.Errorf("expected details.fields, got none")
+		}
+	})
+}
+
+func TestRecipeImport(t *testing.T) {
+	var gotBody map[string]any
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost && r.URL.Path == "/api/recipes/create/url" {
+			_ = json.NewDecoder(r.Body).Decode(&gotBody)
+			_, _ = w.Write([]byte(`"scraped-dish"`))
+			return
+		}
+		http.NotFound(w, r)
+	}))
+	defer srv.Close()
+
+	cfg := filepath.Join(t.TempDir(), "config.yaml")
+	stdout, stderr, code := runCLI(t, cliRun{args: []string{
+		"recipe", "import", "https://example.com/recipe",
+		"--url", srv.URL, "--token", "tok", "--config", cfg, "--output", "json",
+	}})
+	if code != 0 {
+		t.Fatalf("exit = %d\nstderr:\n%s", code, stderr)
+	}
+	if gotBody["url"] != "https://example.com/recipe" {
+		t.Errorf("POST body url = %v", gotBody["url"])
+	}
+	var doc map[string]string
+	if err := json.Unmarshal([]byte(stdout), &doc); err != nil {
+		t.Fatalf("stdout not JSON: %v\n%s", err, stdout)
+	}
+	if doc["slug"] != "scraped-dish" {
+		t.Errorf("slug = %q, want scraped-dish", doc["slug"])
+	}
+}
+
 func TestRecipeListAllRejectsNegativePerPage(t *testing.T) {
 	srv := paginatedRecipeServer(t, 5)
 	defer srv.Close()
