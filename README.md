@@ -57,6 +57,31 @@ Download an archive for your platform from the
 [Releases](https://github.com/gloos/mealie-cli/releases) page, extract it, and
 put the `mealie` binary on your `PATH`.
 
+#### Verify the download (optional but recommended)
+
+Each release ships a `checksums.txt`, signed keyless with
+[cosign](https://docs.sigstore.dev/) via GitHub's OIDC identity. Verification is
+two steps: first confirm the signature on `checksums.txt`, then confirm your
+downloaded archive is listed in that now-trusted file. Download `checksums.txt`,
+`checksums.txt.pem` and `checksums.txt.sig` alongside your archive, then:
+
+```sh
+# 1. Verify checksums.txt was signed by this repo's release pipeline.
+cosign verify-blob \
+  --certificate checksums.txt.pem \
+  --signature checksums.txt.sig \
+  --certificate-identity-regexp 'https://github.com/gloos/mealie-cli/.*' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+  checksums.txt
+
+# 2. Verify your archive's digest against the trusted checksums.txt.
+#    --ignore-missing only checks the archive(s) you actually downloaded.
+sha256sum --ignore-missing -c checksums.txt      # Linux
+shasum -a 256 --ignore-missing -c checksums.txt  # macOS
+```
+
+Step 1 on its own does not verify any archive — both steps are required.
+
 ### Go
 
 ```sh

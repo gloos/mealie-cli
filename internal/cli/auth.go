@@ -65,6 +65,11 @@ func newAuthLoginCmd(f *Factory) *cobra.Command {
 				return usageError("a server URL is required (use --url)")
 			}
 
+			// Warn before any credential leaves the machine — covers both the
+			// password and token flows, and fires before the interactive password
+			// prompt so the user learns the link is unencrypted before typing it.
+			f.warnInsecureCredentials(normURL)
+
 			token := f.opts.token
 			if token == "" && username == "" && !f.opts.noInput {
 				token, err = f.promptPassword("API token (press Enter to log in with username/password instead): ")
@@ -86,7 +91,7 @@ func newAuthLoginCmd(f *Factory) *cobra.Command {
 						return err
 					}
 				}
-				loginClient, cerr := core.New(normURL, "", core.WithUserAgent(userAgent()), core.WithTimeout(f.opts.timeout))
+				loginClient, cerr := core.New(normURL, "", f.coreOptions()...)
 				if cerr != nil {
 					return cerr
 				}
@@ -96,7 +101,7 @@ func newAuthLoginCmd(f *Factory) *cobra.Command {
 				}
 			}
 
-			client, cerr := core.New(normURL, token, core.WithUserAgent(userAgent()), core.WithTimeout(f.opts.timeout))
+			client, cerr := core.New(normURL, token, f.coreOptions()...)
 			if cerr != nil {
 				return cerr
 			}
