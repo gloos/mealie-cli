@@ -36,6 +36,15 @@ func newAuthLoginCmd(f *Factory) *cobra.Command {
 				return err
 			}
 
+			if password != "" {
+				fmt.Fprintln(f.Err, "warning: --password on the command line is visible to other users "+
+					"via the process list and shell history; prefer interactive entry.")
+			}
+			if f.opts.token != "" {
+				fmt.Fprintln(f.Err, "warning: --token on the command line is visible to other users "+
+					"via the process list and shell history; prefer MEALIE_TOKEN or interactive entry.")
+			}
+
 			baseURL := f.opts.url
 			if baseURL == "" {
 				if res, _, _, rerr := f.resolved(); rerr == nil {
@@ -55,6 +64,11 @@ func newAuthLoginCmd(f *Factory) *cobra.Command {
 			if normURL == "" {
 				return usageError("a server URL is required (use --url)")
 			}
+
+			// Warn before any credential leaves the machine — covers both the
+			// password and token flows, and fires before the interactive password
+			// prompt so the user learns the link is unencrypted before typing it.
+			f.warnInsecureCredentials(normURL)
 
 			token := f.opts.token
 			if token == "" && username == "" && !f.opts.noInput {
@@ -77,7 +91,7 @@ func newAuthLoginCmd(f *Factory) *cobra.Command {
 						return err
 					}
 				}
-				loginClient, cerr := core.New(normURL, "", core.WithUserAgent(userAgent()), core.WithTimeout(f.opts.timeout))
+				loginClient, cerr := core.New(normURL, "", f.coreOptions()...)
 				if cerr != nil {
 					return cerr
 				}
@@ -87,7 +101,7 @@ func newAuthLoginCmd(f *Factory) *cobra.Command {
 				}
 			}
 
-			client, cerr := core.New(normURL, token, core.WithUserAgent(userAgent()), core.WithTimeout(f.opts.timeout))
+			client, cerr := core.New(normURL, token, f.coreOptions()...)
 			if cerr != nil {
 				return cerr
 			}

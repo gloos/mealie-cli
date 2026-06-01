@@ -19,6 +19,10 @@ const (
 	defaultRetries     = 2
 	defaultBackoffBase = 200 * time.Millisecond
 	maxBackoff         = 5 * time.Second
+	// maxResponseBytes caps how much of a response body we buffer, so a hostile
+	// or malfunctioning server cannot exhaust client memory with an unbounded
+	// stream. Generous enough for any realistic recipe/list payload.
+	maxResponseBytes = 50 << 20 // 50 MiB
 )
 
 // Client is a Mealie API client. It is safe for concurrent use once
@@ -182,7 +186,7 @@ func (c *Client) request(ctx context.Context, token, method, path string, query 
 			return lastErr
 		}
 
-		respBody, readErr := io.ReadAll(resp.Body)
+		respBody, readErr := io.ReadAll(io.LimitReader(resp.Body, maxResponseBytes+1))
 		resp.Body.Close()
 		if readErr != nil {
 			lastErr = &TransportError{Err: readErr}
@@ -190,6 +194,9 @@ func (c *Client) request(ctx context.Context, token, method, path string, query 
 				continue
 			}
 			return lastErr
+		}
+		if int64(len(respBody)) > maxResponseBytes {
+			return &TransportError{Err: fmt.Errorf("response from %s %s exceeded the %d-byte limit", method, path, maxResponseBytes)}
 		}
 
 		if resp.StatusCode >= 200 && resp.StatusCode < 300 {

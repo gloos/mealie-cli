@@ -52,7 +52,12 @@ func newDoctorCmd(f *Factory) *cobra.Command {
 			}
 			checks = append(checks, checkResult{"server-url", "ok", res.BaseURL})
 
-			client, cerr := core.New(res.BaseURL, res.Token, core.WithUserAgent(userAgent()), core.WithTimeout(f.opts.timeout))
+			// The connectivity and version probe only hits the public About
+			// endpoint, so build a tokenless client for it: core attaches the token
+			// to every request, and doctor must not put the token on the wire before
+			// the insecure-transport warning — nor at all on a public probe. The
+			// authenticated client is built below, only for the Whoami check.
+			client, cerr := core.New(res.BaseURL, "", f.coreOptions()...)
 			if cerr != nil {
 				checks = append(checks, checkResult{"client", "fail", cerr.Error()})
 				return finishDoctor(p, checks, cerr)
@@ -78,7 +83,15 @@ func newDoctorCmd(f *Factory) *cobra.Command {
 				checks = append(checks, checkResult{"auth", "warn", "no API token configured; only public endpoints are available"})
 				return finishDoctor(p, checks, nil)
 			}
-			user, uerr := client.Whoami(ctx)
+			// Warn before the token reaches the wire for the first time, then build
+			// the authenticated client used solely for the Whoami check.
+			f.warnInsecureTransport(res.BaseURL, res.Token)
+			authClient, cerr := core.New(res.BaseURL, res.Token, f.coreOptions()...)
+			if cerr != nil {
+				checks = append(checks, checkResult{"client", "fail", cerr.Error()})
+				return finishDoctor(p, checks, cerr)
+			}
+			user, uerr := authClient.Whoami(ctx)
 			if uerr != nil {
 				checks = append(checks, checkResult{"auth", "fail", uerr.Error()})
 				return finishDoctor(p, checks, uerr)
