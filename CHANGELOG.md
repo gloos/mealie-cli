@@ -6,6 +6,32 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-06-01
+
+### Security
+
+- Warn on stderr before an API token or login credentials are sent over an
+  unencrypted `http://` connection to a non-loopback host. The check covers
+  `auth login` (both the token and the username/password flows) and `doctor`,
+  is not silenced by `--quiet`, and never echoes the secret. `doctor`'s public
+  connectivity probe no longer sends the token at all.
+- Cap buffered HTTP response bodies at 50 MiB so a hostile or malfunctioning
+  server cannot exhaust client memory with an unbounded stream.
+
+### Changed
+
+- Pin all GitHub Actions to commit SHAs, and pin GoReleaser to `v2.16.0` rather
+  than a floating `~> v2` range, so the release tooling is a reviewed input.
+
+### Added
+
+- Sign `checksums.txt` keyless with cosign via GitHub OIDC on release, and
+  document the complete two-step verification (verify the signature on
+  `checksums.txt`, then check the downloaded archive's digest against it) in the
+  README and the GoReleaser config.
+
+## [0.1.0] - 2026-05-31
+
 ### Added
 
 - Initial release of Mealie CLI.
@@ -24,4 +50,6 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Reusable Go SDK in `pkg/core`, with contract tests against a pinned Mealie
   OpenAPI spec (v3.19.2).
 
-[Unreleased]: https://github.com/gloos/mealie-cli/compare/HEAD...HEAD
+[Unreleased]: https://github.com/gloos/mealie-cli/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/gloos/mealie-cli/compare/v0.1.0...v0.2.0
+[0.1.0]: https://github.com/gloos/mealie-cli/releases/tag/v0.1.0
