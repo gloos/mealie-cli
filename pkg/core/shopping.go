@@ -50,6 +50,16 @@ type CreateShoppingItem struct {
 	Quantity       *float64 `json:"quantity,omitempty"`
 }
 
+// AddRecipeToList is one entry in the bulk "add recipe to a shopping list"
+// request body. Scale carries omitempty so an unset (zero) value is dropped from
+// the request, letting the server apply its documented default of 1 rather than
+// us forcing a scale of 0. pkg/core is a public surface, so the tag — not just
+// the CLI — has to honour that default.
+type AddRecipeToList struct {
+	RecipeID string  `json:"recipeId"`
+	Scale    float64 `json:"recipeIncrementQuantity,omitempty"` // 0/unset → server default (1)
+}
+
 // ListShoppingLists returns a page of shopping lists.
 func (c *Client) ListShoppingLists(ctx context.Context, opts ListOptions) (*Page[ShoppingList], error) {
 	q := url.Values{}
@@ -95,6 +105,28 @@ func (c *Client) AddShoppingItem(ctx context.Context, in CreateShoppingItem) (*S
 		return nil, fmt.Errorf("item create returned no items")
 	}
 	return &coll.CreatedItems[0], nil
+}
+
+// AddRecipesToShoppingList pushes one or more recipes' ingredients onto a
+// shopping list via the bulk endpoint (the non-deprecated .../recipe path; the
+// .../recipe/{recipe_id} variant is deprecated). The request body is a JSON
+// array of AddRecipeToList.
+//
+// The 200 response is a ShoppingListOut, decoded into the curated ShoppingList.
+// That is deliberately display-lossy — it drops recipeReferences, groupId,
+// userId and the like that the curated struct does not model — because the
+// confirmation render only needs the list name and its listItems, matching the
+// trade-off the rest of the SDK makes.
+//
+// The POST is intentionally not retried (c.do skips POST): re-running would
+// duplicate the added ingredients, so a single attempt is correct.
+func (c *Client) AddRecipesToShoppingList(ctx context.Context, listID string, recipes []AddRecipeToList) (*ShoppingList, error) {
+	var list ShoppingList
+	path := "/api/households/shopping/lists/" + url.PathEscape(listID) + "/recipe"
+	if err := c.do(ctx, "POST", path, nil, recipes, &list); err != nil {
+		return nil, err
+	}
+	return &list, nil
 }
 
 // GetShoppingItem fetches a single shopping list item by id.

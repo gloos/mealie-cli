@@ -43,6 +43,7 @@ type schema struct {
 	Ref        string            `json:"$ref"`
 	Type       string            `json:"type"`
 	Properties map[string]schema `json:"properties"`
+	Items      *schema           `json:"items"`
 }
 
 func loadSpec(t *testing.T) *openapiSpec {
@@ -105,6 +106,7 @@ func TestContractOperations(t *testing.T) {
 		{"/api/households/shopping/lists", "post", nil},
 		{"/api/households/shopping/lists/{item_id}", "get", nil},
 		{"/api/households/shopping/lists/{item_id}", "delete", nil},
+		{"/api/households/shopping/lists/{item_id}/recipe", "post", nil},
 		{"/api/households/shopping/items", "post", nil},
 		{"/api/households/shopping/items/{item_id}", "get", nil},
 		{"/api/households/shopping/items/{item_id}", "put", nil},
@@ -139,6 +141,8 @@ func TestContractResponseShapes(t *testing.T) {
 		{"/api/households/shopping/items/{item_id}", "get", "200", "ShoppingListItemOut-Output"},
 		{"/api/households/shopping/lists", "post", "201", "ShoppingListOut"},
 		{"/api/households/shopping/lists/{item_id}", "get", "200", "ShoppingListOut"},
+		// This endpoint returns 200 (not the 201 the adjacent list-create row uses).
+		{"/api/households/shopping/lists/{item_id}/recipe", "post", "200", "ShoppingListOut"},
 		{"/api/households/mealplans", "post", "201", "ReadPlanEntry"},
 	}
 	for _, c := range cases {
@@ -156,6 +160,29 @@ func TestContractResponseShapes(t *testing.T) {
 	}
 }
 
+// TestContractRequestBodies asserts the request bodies we encode match the spec.
+// The only non-trivial shape is the bulk "add recipe to list" endpoint: choosing
+// the non-deprecated path is worthwhile only if its body is an *array* of
+// ShoppingListAddRecipeParamsBulk, so that distinction is guarded here against
+// spec drift (the local httptest only proves our encoder, not the contract).
+func TestContractRequestBodies(t *testing.T) {
+	spec := loadSpec(t)
+	op := spec.op(t, "/api/households/shopping/lists/{item_id}/recipe", "post")
+	if op.RequestBody == nil {
+		t.Fatal("POST .../recipe has no requestBody in the spec")
+	}
+	body := op.RequestBody.Content["application/json"].Schema
+	if body.Type != "array" {
+		t.Errorf("requestBody schema type = %q, want array", body.Type)
+	}
+	if body.Items == nil {
+		t.Fatal("requestBody array schema has no items")
+	}
+	if got := refName(body.Items.Ref); got != "ShoppingListAddRecipeParamsBulk" {
+		t.Errorf("requestBody items $ref = %q, want ShoppingListAddRecipeParamsBulk", got)
+	}
+}
+
 func (s *openapiSpec) props(name string) map[string]schema {
 	return s.Components.Schemas[name].Properties
 }
@@ -165,13 +192,14 @@ func (s *openapiSpec) props(name string) map[string]schema {
 func TestContractDTOFields(t *testing.T) {
 	spec := loadSpec(t)
 	checks := map[string][]string{
-		"AppInfo":                        {"version", "production"},
-		"RecipeSummary":                  {"slug", "name", "recipeCategory", "tags", "recipeYield", "totalTime", "rating", "dateAdded"},
-		"CreatePlanEntry":                {"date", "entryType", "title", "text", "recipeId"},
-		"ReadPlanEntry":                  {"id", "date", "entryType", "title", "text", "recipeId", "recipe"},
-		"ShoppingListItemCreate":         {"shoppingListId", "note", "quantity"},
-		"ShoppingListItemOut-Output":     {"id", "shoppingListId", "checked", "position", "foodId", "unitId", "labelId", "note", "quantity"},
-		"ShoppingListItemsCollectionOut": {"createdItems", "updatedItems", "deletedItems"},
+		"AppInfo":                         {"version", "production"},
+		"RecipeSummary":                   {"slug", "name", "recipeCategory", "tags", "recipeYield", "totalTime", "rating", "dateAdded"},
+		"CreatePlanEntry":                 {"date", "entryType", "title", "text", "recipeId"},
+		"ReadPlanEntry":                   {"id", "date", "entryType", "title", "text", "recipeId", "recipe"},
+		"ShoppingListItemCreate":          {"shoppingListId", "note", "quantity"},
+		"ShoppingListItemOut-Output":      {"id", "shoppingListId", "checked", "position", "foodId", "unitId", "labelId", "note", "quantity"},
+		"ShoppingListItemsCollectionOut":  {"createdItems", "updatedItems", "deletedItems"},
+		"ShoppingListAddRecipeParamsBulk": {"recipeId", "recipeIncrementQuantity"},
 	}
 	for name, fields := range checks {
 		props := spec.props(name)

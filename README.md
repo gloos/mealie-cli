@@ -186,10 +186,11 @@ mealie config    path | list | use | view     Manage profiles & settings
 mealie doctor                                  Diagnose connectivity & compatibility
 mealie version                                 Show version & compatibility info
 mealie schema                                  Emit the command tree as JSON
-mealie recipe    list | get | create | import | delete
+mealie recipe    list | get | create | import | export | delete
 mealie mealplan  list | today | add | delete
 mealie shopping  list | get | create | delete
-mealie shopping item  add | check | uncheck | delete
+mealie shopping item    add | check | uncheck | delete
+mealie shopping recipe  add
 mealie completion  bash | zsh | fish | powershell
 ```
 
@@ -198,9 +199,11 @@ Run `mealie <command> --help` for full flags and examples. A few highlights:
 ```sh
 mealie recipe list --tag vegetarian --tag quick --all
 mealie recipe get thai-green-curry
+mealie recipe export thai-green-curry -O ./backup/   # lossless JSON snapshot
 mealie mealplan list --start 2026-06-01 --end 2026-06-07
 mealie shopping get <list-id>
 mealie shopping item check <item-id>
+mealie shopping recipe add thai-green-curry --list <list-id>  # add its ingredients
 ```
 
 ## Scripting & automation
@@ -223,9 +226,21 @@ contract so tools and agents can drive it reliably:
 # Slugs of every vegetarian recipe, newline-delimited
 mealie recipe list --tag vegetarian --all --output ndjson | jq -r '.slug'
 
+# Back up every recipe as lossless JSON, one file per recipe
+mealie recipe export --all -O ./backup/
+
+# Build a shopping list from a meal plan: add a recipe's ingredients to a list
+mealie shopping recipe add thai-green-curry --list "$LIST_ID" --output json
+
 # Fail fast in a script, no prompts
 mealie --no-input recipe delete old-recipe --yes
 ```
+
+> `--all` paginates **client-side**, fetching the result set in batches (the size
+> of `--per-page`/`--limit`, default 100) until it is exhausted — so large
+> instances degrade gracefully instead of straining a single unbounded response.
+> `recipe export` always emits raw, lossless recipe JSON; with no `-O` it writes a
+> single recipe to stdout, so it composes cleanly in a pipeline.
 
 ### Exit codes
 

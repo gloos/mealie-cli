@@ -6,21 +6,47 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-### Security
+## [0.3.0] - 2026-06-01
 
-- Pin the documented `cosign verify-blob` identity to this repo's tagged release
-  workflow (`…/.github/workflows/release.yml@refs/tags/v…`) instead of the
-  broader `…/mealie-cli/.*`, so a signature minted by any other workflow in the
-  repo can't satisfy the published verification command.
+### Added
+
+- `mealie shopping recipe add <recipe-slug> --list <id>` pushes a recipe's
+  ingredients onto a shopping list via Mealie's non-deprecated bulk endpoint.
+  `--scale N` multiplies quantities (an unset scale honours the server default of
+  1); `--recipe-id <uuid>` skips the slug lookup. The confirmation reports the
+  list's total item count.
+- `mealie recipe export <slug>…` writes raw, lossless recipe JSON for backups —
+  every field the server sends, unlike the curated `recipe get`. With no `-O` a
+  single recipe goes to stdout; `-O <dir>` writes `<slug>.json` per recipe; `-O
+  <file>` writes one recipe there; `--all` exports everything into a directory.
+  A multi-recipe export is all-or-nothing — every recipe is staged before any is
+  published, so a mid-run failure leaves existing backups untouched. Files are
+  written owner-only (`0600`, like the config file) since recipe JSON is lossless
+  and may carry private data, slug filenames are path-traversal guarded, and
+  existing files are never overwritten without `--force`.
 
 ### Changed
 
+- `--all` now paginates **client-side**: instead of asking the server for the
+  whole result set in one unbounded response (the old `perPage=-1` sentinel,
+  which could exceed the response-size cap on large instances), it walks the
+  pages in batches sized by `--per-page`/`--limit` (default 100) until exhausted.
+  Combining `--all` with an explicit `--page`, or passing a negative
+  `--per-page`/`--limit`, is now a usage error rather than being silently
+  ignored. The `pkg/core` SDK's `All()`/`perPage=-1` helper is unchanged.
 - Release signing moved to cosign v3 (`sigstore/cosign-installer` bumped to
   v4.1.2). `checksums.txt` is now signed into a single Sigstore bundle,
   `checksums.txt.sigstore.json`, replacing the separate `checksums.txt.pem` and
   `checksums.txt.sig` files. Verify with `cosign verify-blob --bundle
   checksums.txt.sigstore.json …` (needs cosign v3+); the README has the full
   two-step flow.
+
+### Security
+
+- Pin the documented `cosign verify-blob` identity to this repo's tagged release
+  workflow (`…/.github/workflows/release.yml@refs/tags/v…`) instead of the
+  broader `…/mealie-cli/.*`, so a signature minted by any other workflow in the
+  repo can't satisfy the published verification command.
 
 ## [0.2.0] - 2026-06-01
 
@@ -66,6 +92,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Reusable Go SDK in `pkg/core`, with contract tests against a pinned Mealie
   OpenAPI spec (v3.19.2).
 
-[Unreleased]: https://github.com/gloos/mealie-cli/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/gloos/mealie-cli/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/gloos/mealie-cli/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/gloos/mealie-cli/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/gloos/mealie-cli/releases/tag/v0.1.0

@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/url"
 	"strings"
@@ -101,6 +102,18 @@ func (c *Client) GetRecipe(ctx context.Context, slug string) (*Recipe, error) {
 		return nil, err
 	}
 	return &r, nil
+}
+
+// ExportRecipe fetches a single recipe by slug and returns the response body
+// verbatim. Unlike GetRecipe, which decodes into the curated Recipe struct (and
+// silently drops fields it does not model), this preserves every field the
+// server sends — it is the lossless source for the `recipe export` backup flow.
+func (c *Client) ExportRecipe(ctx context.Context, slug string) (json.RawMessage, error) {
+	var raw json.RawMessage
+	if err := c.do(ctx, "GET", "/api/recipes/"+url.PathEscape(slug), nil, nil, &raw); err != nil {
+		return nil, err
+	}
+	return raw, nil
 }
 
 // CreateRecipe creates an empty recipe with the given name and returns its slug.
